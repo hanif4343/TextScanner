@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="purple_200">#FFBB86FC</color>
+    <color name="purple_500">#FF6200EE</color>
+    <color name="purple_700">#FF3700B3</color>
+    <color name="teal_200">#FF03DAC5</color>
+    <color name="teal_700">#FF018786</color>
+    <color name="black">#FF000000</color>
+    <color name="white">#FFFFFFFF</color>
+
+    <!-- App Theme Colors -->
+    <color name="bg_dark">#0F1117</color>
+    <color name="surface_dark">#1E2130</color>
+    <color name="toolbar_bg">#161B2E</color>
+
+    <!-- Card Colors -->
+    <color name="card_camera">#1E40AF</color>
+    <color name="card_gallery">#065F46</color>
+    <color name="card_pdf">#7C2D12</color>
+
+    <!-- Accent -->
+    <color name="accent_blue">#60A5FA</color>
+    <color name="accent_green">#34D399</color>
+    <color name="accent_green_tint">#0D2B22</color>
+
+    <!-- Text -->
+    <color name="text_secondary">#9CA3AF</color>
+
+    <!-- Highlight -->
+    <color name="highlight_yellow">#FBBF24</color>
+
+    <!-- Error -->
+    <color name="error_red">#EF4444</color>
+
+    <!-- Status bar -->
+    <color name="status_bar">#0F1117</color>
+</resources>
