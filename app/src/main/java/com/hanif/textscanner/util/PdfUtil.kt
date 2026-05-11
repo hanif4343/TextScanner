@@ -8,60 +8,45 @@ import android.net.Uri
 import android.os.ParcelFileDescriptor
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import java.io.File
 
 object PdfUtil {
 
-    /**
-     * Convert PDF pages to Bitmaps for OCR processing.
-     * Uses Android's built-in PdfRenderer (API 21+).
-     * Renders at 300 DPI equivalent for best OCR accuracy.
-     */
     suspend fun pdfToImages(context: Context, uri: Uri): List<Bitmap> = withContext(Dispatchers.IO) {
         val bitmaps = mutableListOf<Bitmap>()
-        var parcelFileDescriptor: ParcelFileDescriptor? = null
+        var pfd: ParcelFileDescriptor? = null
+        val tempFile = File(context.cacheDir, "pdf_${System.currentTimeMillis()}.pdf")
 
         try {
-            // Copy to temp file if needed (content:// URIs need this)
-            val tempFile = java.io.File(context.cacheDir, "temp_pdf_${System.currentTimeMillis()}.pdf")
+            // Copy to temp file (required for PdfRenderer)
             context.contentResolver.openInputStream(uri)?.use { input ->
-                tempFile.outputStream().use { output ->
-                    input.copyTo(output)
-                }
+                tempFile.outputStream().use { input.copyTo(it) }
             }
 
-            parcelFileDescriptor = ParcelFileDescriptor.open(
-                tempFile,
-                ParcelFileDescriptor.MODE_READ_ONLY
-            )
+            pfd = ParcelFileDescriptor.open(tempFile, ParcelFileDescriptor.MODE_READ_ONLY)
+            val renderer = PdfRenderer(pfd)
 
-            val renderer = PdfRenderer(parcelFileDescriptor)
-            val pageCount = renderer.pageCount
-
-            for (i in 0 until pageCount) {
+            for (i in 0 until renderer.pageCount) {
                 val page = renderer.openPage(i)
 
-                // Render at ~2x for better OCR quality
-                val scale = 2.0f
+                // Render at 2.5x scale — Tesseract needs higher res for Bengali
+                val scale = 2.5f
                 val width = (page.width * scale).toInt()
                 val height = (page.height * scale).toInt()
 
-                val bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
-                // White background
-                bitmap.eraseColor(Color.WHITE)
-
-                page.render(bitmap, null, null, PdfRenderer.Page.RENDER_MODE_FOR_DISPLAY)
+                val bmp = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
+                bmp.eraseColor(Color.WHITE)
+                page.render(bmp, null, null, PdfRenderer.Page.RENDER_MODE_FOR_DISPLAY)
                 page.close()
-
-                bitmaps.add(bitmap)
+                bitmaps.add(bmp)
             }
 
             renderer.close()
-            tempFile.delete()
-
         } catch (e: Exception) {
             e.printStackTrace()
         } finally {
-            try { parcelFileDescriptor?.close() } catch (_: Exception) {}
+            try { pfd?.close() } catch (_: Exception) {}
+            try { tempFile.delete() } catch (_: Exception) {}
         }
 
         bitmaps
