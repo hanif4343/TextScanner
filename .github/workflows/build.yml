@@ -23,8 +23,16 @@ jobs:
           distribution: 'temurin'
           cache: gradle
 
-      - name: Grant gradlew permission
-        run: chmod +x gradlew
+      - name: Setup Gradle Wrapper
+        run: |
+          # Install gradle to generate wrapper
+          wget -q https://services.gradle.org/distributions/gradle-8.0-bin.zip -O gradle.zip
+          unzip -q gradle.zip
+          export PATH=$PATH:$(pwd)/gradle-8.0/bin
+          
+          # Generate gradlew in project root
+          gradle wrapper --gradle-version 8.0
+          chmod +x gradlew
 
       - name: Set version info
         run: |
@@ -59,7 +67,6 @@ jobs:
           cp app/build/outputs/apk/release/app-release.apk \
              release-output/TextScanner-v${{ env.VERSION_NAME }}-code${{ env.VERSION_CODE }}.apk
           echo "APK_PATH=release-output/TextScanner-v${{ env.VERSION_NAME }}-code${{ env.VERSION_CODE }}.apk" >> $GITHUB_ENV
-          echo "APK_NAME=TextScanner-v${{ env.VERSION_NAME }}-code${{ env.VERSION_CODE }}.apk" >> $GITHUB_ENV
 
       - name: Upload APK Artifact
         uses: actions/upload-artifact@v4
@@ -77,15 +84,10 @@ jobs:
             ## TextScanner Update
             **Version:** ${{ env.VERSION_NAME }}
             **Build:** ${{ env.VERSION_CODE }}
-
             ### Changes
             ${{ github.event.head_commit.message }}
-
             ---
-            ### Install
-            1. নিচে APK ডাউনলোড করুন
-            2. ফোনে ইনস্টল করুন
-            3. পরবর্তী আপডেট আনইনস্টল ছাড়াই ইনস্টল হবে ✅
+            APK ডাউনলোড করে ইনস্টল করুন ✅
           files: ${{ env.APK_PATH }}
           token: ${{ secrets.GITHUB_TOKEN }}
           make_latest: true
