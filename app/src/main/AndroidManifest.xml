@@ -27,6 +27,11 @@
         android:largeHeap="true"
         tools:targetApi="31">
 
+        <!-- ML Kit — Bengali model bundled in APK (no internet needed) -->
+        <meta-data
+            android:name="com.google.mlkit.vision.DEPENDENCIES"
+            android:value="ocr_bengali" />
+
         <activity
             android:name=".ui.MainActivity"
             android:exported="true"
