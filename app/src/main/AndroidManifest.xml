@@ -27,10 +27,10 @@
         android:largeHeap="true"
         tools:targetApi="31">
 
-        <!-- ML Kit — Bengali model bundled in APK (no internet needed) -->
+        <!-- ML Kit — Devanagari model bundled (covers Bengali script) -->
         <meta-data
             android:name="com.google.mlkit.vision.DEPENDENCIES"
-            android:value="ocr_bengali" />
+            android:value="ocr_devanagari" />
 
         <activity
             android:name=".ui.MainActivity"
