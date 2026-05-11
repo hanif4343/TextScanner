@@ -58,10 +58,11 @@ dependencies {
     implementation "androidx.camera:camera-view:${camerax_version}"
     implementation "androidx.camera:camera-extensions:${camerax_version}"
 
-    // ML Kit Bengali OCR — bundled in APK, no internet needed
-    // text-recognition-bengali covers Bengali script perfectly
+    // ML Kit OCR — bundled in APK, no internet needed
+    // Latin: English + numbers
     implementation 'com.google.mlkit:text-recognition:16.0.0'
-    implementation 'com.google.mlkit:text-recognition-bengali:16.0.0'
+    // Devanagari: covers Bengali, Hindi, Sanskrit (Brahmic script family)
+    implementation 'com.google.mlkit:text-recognition-devanagari:16.0.0'
 
     // PDF Renderer
     implementation 'com.tom-roush:pdfbox-android:2.0.27.0'
