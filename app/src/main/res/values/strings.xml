@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Text Scanner</string>
+    <string name="action_copy">Copy</string>
+    <string name="action_share">Share</string>
+    <string name="action_search">Search</string>
+    <string name="action_edit">Edit</string>
+    <string name="scanning">Scanning…</string>
+    <string name="no_text_found">No text found</string>
+    <string name="copied">Copied to clipboard!</string>
+</resources>
