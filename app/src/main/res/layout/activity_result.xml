@@ -1,0 +1,247 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:background="@color/bg_dark">
+
+    <!-- Toolbar -->
+    <com.google.android.material.appbar.MaterialToolbar
+        android:id="@+id/toolbar"
+        android:layout_width="match_parent"
+        android:layout_height="?attr/actionBarSize"
+        android:background="@color/toolbar_bg"
+        app:title="Scanned Text"
+        app:titleTextColor="@color/white"
+        app:navigationIconTint="@color/white" />
+
+    <!-- Search Bar -->
+    <LinearLayout
+        android:id="@+id/searchBar"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:background="@color/surface_dark"
+        android:padding="8dp"
+        android:gravity="center_vertical"
+        android:visibility="gone">
+
+        <EditText
+            android:id="@+id/etSearch"
+            android:layout_width="0dp"
+            android:layout_height="40dp"
+            android:layout_weight="1"
+            android:hint="Search in text..."
+            android:textColor="@color/white"
+            android:textColorHint="@color/text_secondary"
+            android:background="@drawable/search_input_bg"
+            android:paddingHorizontal="12dp"
+            android:imeOptions="actionSearch"
+            android:inputType="text"
+            android:textSize="14sp" />
+
+        <TextView
+            android:id="@+id/tvSearchCount"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:textColor="@color/accent_blue"
+            android:textSize="13sp"
+            android:layout_marginHorizontal="8dp"
+            android:visibility="gone" />
+
+        <ImageButton
+            android:id="@+id/btnSearchClear"
+            android:layout_width="36dp"
+            android:layout_height="36dp"
+            android:src="@drawable/ic_close"
+            android:tint="@color/text_secondary"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:contentDescription="Clear search" />
+    </LinearLayout>
+
+    <!-- Stats bar -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:background="@color/surface_dark"
+        android:paddingHorizontal="16dp"
+        android:paddingVertical="6dp"
+        android:gravity="center_vertical">
+
+        <TextView
+            android:id="@+id/tvStats"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="Lines: 0 | Words: 0 | Chars: 0"
+            android:textSize="12sp"
+            android:textColor="@color/text_secondary" />
+
+        <com.google.android.material.chip.Chip
+            android:id="@+id/chipMcqDetected"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text=""
+            android:textSize="11sp"
+            app:chipBackgroundColor="@color/accent_green_tint"
+            app:chipStrokeColor="@color/accent_green"
+            app:chipStrokeWidth="1dp"
+            android:textColor="@color/accent_green"
+            android:visibility="gone" />
+    </LinearLayout>
+
+    <!-- Scrollable Text Content -->
+    <ScrollView
+        android:id="@+id/scrollContent"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:fillViewport="true">
+
+        <EditText
+            android:id="@+id/etResult"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:padding="16dp"
+            android:textSize="15sp"
+            android:textColor="@color/white"
+            android:lineSpacingMultiplier="1.6"
+            android:background="@color/bg_dark"
+            android:gravity="top|start"
+            android:inputType="textMultiLine|textImeMultiLine"
+            android:scrollbars="none"
+            android:enabled="false"
+            android:fontFamily="sans-serif"
+            android:cursorVisible="true" />
+    </ScrollView>
+
+    <!-- Empty state -->
+    <LinearLayout
+        android:id="@+id/tvEmpty"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:orientation="vertical"
+        android:gravity="center"
+        android:visibility="gone">
+
+        <ImageView
+            android:layout_width="80dp"
+            android:layout_height="80dp"
+            android:src="@drawable/ic_scan"
+            android:tint="@color/text_secondary"
+            android:alpha="0.4"
+            android:contentDescription="No text" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="No text found"
+            android:textSize="18sp"
+            android:textColor="@color/text_secondary"
+            android:layout_marginTop="12dp" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Try scanning a clearer image"
+            android:textSize="13sp"
+            android:textColor="@color/text_secondary"
+            android:layout_marginTop="4dp" />
+    </LinearLayout>
+
+    <!-- Action Buttons Row -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:background="@color/toolbar_bg"
+        android:padding="8dp"
+        android:gravity="center">
+
+        <!-- Copy -->
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnCopy"
+            android:layout_width="0dp"
+            android:layout_height="44dp"
+            android:layout_weight="1"
+            android:text="Copy"
+            android:textSize="12sp"
+            app:icon="@drawable/ic_copy"
+            app:iconSize="18dp"
+            app:iconGravity="top"
+            android:layout_marginHorizontal="3dp"
+            style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+            app:strokeColor="@color/accent_blue"
+            android:textColor="@color/accent_blue" />
+
+        <!-- Search -->
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnSearch"
+            android:layout_width="0dp"
+            android:layout_height="44dp"
+            android:layout_weight="1"
+            android:text="Search"
+            android:textSize="12sp"
+            app:icon="@drawable/ic_search"
+            app:iconSize="18dp"
+            app:iconGravity="top"
+            android:layout_marginHorizontal="3dp"
+            style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+            app:strokeColor="@color/accent_blue"
+            android:textColor="@color/accent_blue" />
+
+        <!-- Edit -->
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnEdit"
+            android:layout_width="0dp"
+            android:layout_height="44dp"
+            android:layout_weight="1"
+            android:text="Edit"
+            android:textSize="12sp"
+            app:icon="@drawable/ic_edit"
+            app:iconSize="18dp"
+            app:iconGravity="top"
+            android:layout_marginHorizontal="3dp"
+            style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+            app:strokeColor="@color/accent_blue"
+            android:textColor="@color/accent_blue" />
+
+        <!-- Share -->
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnShare"
+            android:layout_width="0dp"
+            android:layout_height="44dp"
+            android:layout_weight="1"
+            android:text="Share"
+            android:textSize="12sp"
+            app:icon="@drawable/ic_share"
+            app:iconSize="18dp"
+            app:iconGravity="top"
+            android:layout_marginHorizontal="3dp"
+            style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+            app:strokeColor="@color/accent_blue"
+            android:textColor="@color/accent_blue" />
+
+        <!-- Export -->
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnExport"
+            android:layout_width="0dp"
+            android:layout_height="44dp"
+            android:layout_weight="1"
+            android:text="Export"
+            android:textSize="12sp"
+            app:icon="@drawable/ic_export"
+            app:iconSize="18dp"
+            app:iconGravity="top"
+            android:layout_marginHorizontal="3dp"
+            style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+            app:strokeColor="@color/accent_blue"
+            android:textColor="@color/accent_blue" />
+
+    </LinearLayout>
+
+</LinearLayout>
