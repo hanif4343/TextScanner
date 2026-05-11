@@ -58,10 +58,8 @@ dependencies {
     implementation "androidx.camera:camera-view:${camerax_version}"
     implementation "androidx.camera:camera-extensions:${camerax_version}"
 
-    // ML Kit Text Recognition - Bundled (works offline, supports Bengali/Devanagari)
-    implementation 'com.google.mlkit:text-recognition:16.0.0'
-    // Devanagari model also helps with Bengali script
-    implementation 'com.google.mlkit:text-recognition-devanagari:16.0.0'
+    // Tesseract OCR - Bengali (ben) + English (eng) offline support
+    implementation 'cz.adaptech.tesseract4android:tesseract4android:4.7.0'
 
     // PDF Renderer
     implementation 'com.tom-roush:pdfbox-android:2.0.27.0'
