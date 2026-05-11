@@ -27,11 +27,6 @@
         android:largeHeap="true"
         tools:targetApi="31">
 
-        <!-- ML Kit model download -->
-        <meta-data
-            android:name="com.google.mlkit.vision.DEPENDENCIES"
-            android:value="ocr" />
-
         <activity
             android:name=".ui.MainActivity"
             android:exported="true"
