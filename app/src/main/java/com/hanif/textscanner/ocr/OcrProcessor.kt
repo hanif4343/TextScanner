@@ -8,141 +8,182 @@ import android.graphics.ColorMatrix
 import android.graphics.ColorMatrixColorFilter
 import android.graphics.Paint
 import android.net.Uri
-import com.google.mlkit.vision.common.InputImage
-import com.google.mlkit.vision.text.TextRecognition
-import com.google.mlkit.vision.text.latin.TextRecognizerOptions
-import kotlinx.coroutines.suspendCancellableCoroutine
-import kotlin.coroutines.resume
-import kotlin.coroutines.resumeWithException
+import android.util.Log
+import com.googlecode.tesseract.android.TessBaseAPI
+import java.io.File
+import java.io.FileOutputStream
 
 object OcrProcessor {
 
+    private const val TAG = "OcrProcessor"
+    private const val TESS_DATA_DIR = "tessdata"
+    // Bengali + English combined — best for Bangla documents
+    private const val LANG = "ben+eng"
+
     /**
-     * Process image from URI - main entry point
-     * Uses Latin recognizer which supports Bengali script well via ML Kit
+     * Initialize tessdata directory — copies ben.traineddata & eng.traineddata
+     * from assets to internal storage on first run.
+     */
+    fun init(context: Context) {
+        val tessDir = getTessDir(context)
+        val dataDir = File(tessDir, TESS_DATA_DIR)
+        dataDir.mkdirs()
+
+        listOf("ben.traineddata", "eng.traineddata").forEach { fileName ->
+            val dest = File(dataDir, fileName)
+            if (!dest.exists() || dest.length() < 1000) {
+                try {
+                    context.assets.open("tessdata/$fileName").use { input ->
+                        FileOutputStream(dest).use { output ->
+                            input.copyTo(output)
+                        }
+                    }
+                    Log.d(TAG, "Copied $fileName (${dest.length()} bytes)")
+                } catch (e: Exception) {
+                    Log.e(TAG, "Failed to copy $fileName: ${e.message}")
+                }
+            }
+        }
+    }
+
+    private fun getTessDir(context: Context): String {
+        return context.filesDir.absolutePath
+    }
+
+    /**
+     * Process image from URI — main entry point
      */
     suspend fun processImage(context: Context, uri: Uri): String {
         val bitmap = loadAndPrepareBitmap(context, uri)
             ?: throw IllegalStateException("Could not load image")
-
         return try {
-            // Try Latin recognizer first (covers Bengali well)
-            val result = runOcr(bitmap)
-            if (result.isNotBlank()) result
-            else {
-                // Try with enhanced bitmap
-                val enhanced = enhanceBitmap(bitmap)
-                runOcr(enhanced).also { enhanced.recycle() }
-            }
+            processBitmap(context, bitmap)
         } finally {
             bitmap.recycle()
         }
     }
 
     /**
-     * Process already-loaded bitmap (used for PDF pages)
+     * Process a Bitmap directly (used for PDF pages)
      */
-    suspend fun processBitmap(bitmap: Bitmap): String {
+    suspend fun processBitmap(context: Context, bitmap: Bitmap): String {
         val prepared = prepareBitmap(bitmap)
+        val result1 = runTesseract(context, prepared)
+        if (prepared != bitmap) prepared.recycle()
+
+        if (result1.isNotBlank() && result1.length > 10) {
+            return result1
+        }
+
+        // Try enhanced version if result was poor
+        val enhanced = enhanceBitmap(bitmap)
+        val result2 = runTesseract(context, enhanced)
+        enhanced.recycle()
+
+        return if (result2.length > result1.length) result2 else result1
+    }
+
+    /**
+     * Core Tesseract OCR call
+     */
+    private fun runTesseract(context: Context, bitmap: Bitmap): String {
+        val tessDir = getTessDir(context)
+        val api = TessBaseAPI()
+
         return try {
-            val result = runOcr(prepared)
-            if (result.isNotBlank()) result
-            else {
-                val enhanced = enhanceBitmap(prepared)
-                runOcr(enhanced).also { enhanced.recycle() }
+            val initialized = api.init(tessDir, LANG)
+            if (!initialized) {
+                Log.e(TAG, "Tesseract init failed — tessdata missing?")
+                return ""
             }
+
+            api.pageSegMode = TessBaseAPI.PageSegMode.PSM_AUTO
+            api.setVariable("load_system_dawg", "false")
+            api.setVariable("load_freq_dawg", "false")
+            api.setVariable("tessedit_do_invert", "false")
+
+            api.setImage(bitmap)
+            val text = api.utF8Text ?: ""
+            api.clear()
+            cleanText(text)
+        } catch (e: Exception) {
+            Log.e(TAG, "Tesseract error: ${e.message}")
+            ""
         } finally {
-            if (prepared != bitmap) prepared.recycle()
+            try { api.recycle() } catch (_: Exception) {}
         }
     }
 
-    private suspend fun runOcr(bitmap: Bitmap): String = suspendCancellableCoroutine { cont ->
-        val recognizer = TextRecognition.getClient(TextRecognizerOptions.DEFAULT_OPTIONS)
-        val image = InputImage.fromBitmap(bitmap, 0)
-
-        recognizer.process(image)
-            .addOnSuccessListener { result ->
-                // Build text preserving line structure
-                val sb = StringBuilder()
-                for (block in result.textBlocks) {
-                    for (line in block.lines) {
-                        sb.append(line.text)
-                        sb.append("\n")
-                    }
-                    sb.append("\n")
-                }
-                cont.resume(sb.toString().trim())
+    private fun cleanText(raw: String): String {
+        return raw
+            .lines()
+            .map { line ->
+                line
+                    .replace(Regex("[|}{\\[\\]@#\\^~`]"), "")
+                    .replace(Regex("\\s{3,}"), "  ")
+                    .trim()
             }
-            .addOnFailureListener { e ->
-                cont.resumeWithException(e)
-            }
+            .filter { it.isNotBlank() }
+            .joinToString("\n")
+            .trim()
     }
 
     private fun loadAndPrepareBitmap(context: Context, uri: Uri): Bitmap? {
         return try {
-            val inputStream = context.contentResolver.openInputStream(uri) ?: return null
-            val options = BitmapFactory.Options().apply {
-                inJustDecodeBounds = true
-            }
-            BitmapFactory.decodeStream(inputStream, null, options)
-            inputStream.close()
-
-            // Calculate sample size to avoid OOM
-            val maxSize = 2048
-            var sampleSize = 1
-            var w = options.outWidth
-            var h = options.outHeight
-            while (w > maxSize || h > maxSize) {
-                sampleSize *= 2
-                w /= 2
-                h /= 2
+            val opts1 = BitmapFactory.Options().apply { inJustDecodeBounds = true }
+            context.contentResolver.openInputStream(uri)?.use {
+                BitmapFactory.decodeStream(it, null, opts1)
             }
 
-            val inputStream2 = context.contentResolver.openInputStream(uri) ?: return null
-            val decodeOptions = BitmapFactory.Options().apply {
-                inSampleSize = sampleSize
+            val maxPx = 3000
+            var sample = 1
+            var w = opts1.outWidth
+            var h = opts1.outHeight
+            while (w > maxPx || h > maxPx) {
+                sample *= 2; w /= 2; h /= 2
+            }
+
+            val opts2 = BitmapFactory.Options().apply {
+                inSampleSize = sample
                 inPreferredConfig = Bitmap.Config.ARGB_8888
             }
-            val raw = BitmapFactory.decodeStream(inputStream2, null, decodeOptions)
-            inputStream2.close()
+            val raw = context.contentResolver.openInputStream(uri)?.use {
+                BitmapFactory.decodeStream(it, null, opts2)
+            } ?: return null
 
-            raw?.let { prepareBitmap(it) }
+            prepareBitmap(raw)
         } catch (e: Exception) {
+            Log.e(TAG, "loadBitmap error: ${e.message}")
             null
         }
     }
 
     private fun prepareBitmap(bitmap: Bitmap): Bitmap {
-        // Scale up small images for better OCR accuracy
-        val minDim = 1200
-        return if (bitmap.width < minDim || bitmap.height < minDim) {
-            val scale = maxOf(minDim.toFloat() / bitmap.width, minDim.toFloat() / bitmap.height)
-            val newW = (bitmap.width * scale).toInt()
-            val newH = (bitmap.height * scale).toInt()
-            Bitmap.createScaledBitmap(bitmap, newW, newH, true)
+        val minDim = 1500
+        val shorter = minOf(bitmap.width, bitmap.height)
+        return if (shorter < minDim) {
+            val scale = minDim.toFloat() / shorter
+            val nw = (bitmap.width * scale).toInt()
+            val nh = (bitmap.height * scale).toInt()
+            Bitmap.createScaledBitmap(bitmap, nw, nh, true)
         } else bitmap
     }
 
-    /**
-     * Enhance bitmap for better OCR on low quality / handwritten text
-     */
-    private fun enhanceBitmap(bitmap: Bitmap): Bitmap {
-        val enhanced = Bitmap.createBitmap(bitmap.width, bitmap.height, Bitmap.Config.ARGB_8888)
-        val canvas = Canvas(enhanced)
-        val paint = Paint()
-
-        // Increase contrast and convert to grayscale
-        val colorMatrix = ColorMatrix()
-        colorMatrix.setSaturation(0f) // grayscale
-        val contrastMatrix = ColorMatrix(floatArrayOf(
-            1.5f, 0f, 0f, 0f, -40f,
-            0f, 1.5f, 0f, 0f, -40f,
-            0f, 0f, 1.5f, 0f, -40f,
-            0f, 0f, 0f, 1f, 0f
+    private fun enhanceBitmap(src: Bitmap): Bitmap {
+        val out = Bitmap.createBitmap(src.width, src.height, Bitmap.Config.ARGB_8888)
+        val canvas = Canvas(out)
+        val paint = Paint(Paint.ANTI_ALIAS_FLAG)
+        val cm = ColorMatrix()
+        cm.setSaturation(0f)
+        val contrast = ColorMatrix(floatArrayOf(
+            2.0f, 0f,   0f,   0f, -80f,
+            0f,   2.0f, 0f,   0f, -80f,
+            0f,   0f,   2.0f, 0f, -80f,
+            0f,   0f,   0f,   1f,   0f
         ))
-        colorMatrix.postConcat(contrastMatrix)
-        paint.colorFilter = ColorMatrixColorFilter(colorMatrix)
-        canvas.drawBitmap(bitmap, 0f, 0f, paint)
-        return enhanced
+        cm.postConcat(contrast)
+        paint.colorFilter = ColorMatrixColorFilter(cm)
+        canvas.drawBitmap(src, 0f, 0f, paint)
+        return out
     }
 }
