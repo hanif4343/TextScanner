@@ -9,8 +9,10 @@ import android.os.Bundle
 import android.view.View
 import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
+import com.hanif.textscanner.data.SessionManager
 import com.hanif.textscanner.databinding.ActivityMainBinding
 import com.hanif.textscanner.ocr.OcrProcessor
 import com.hanif.textscanner.util.PdfUtil
@@ -25,7 +27,7 @@ class MainActivity : AppCompatActivity() {
         ActivityResultContracts.RequestMultiplePermissions()
     ) { permissions ->
         if (permissions.values.all { it }) { pendingAction?.invoke(); pendingAction = null }
-        else Toast.makeText(this, "Permission required to scan", Toast.LENGTH_SHORT).show()
+        else Toast.makeText(this, "Permission required", Toast.LENGTH_SHORT).show()
     }
 
     private val cameraLauncher = registerForActivityResult(
@@ -56,7 +58,6 @@ class MainActivity : AppCompatActivity() {
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
-        // Init Tesseract tessdata in background on startup
         scope.launch(Dispatchers.IO) {
             OcrProcessor.init(applicationContext)
         }
@@ -64,9 +65,26 @@ class MainActivity : AppCompatActivity() {
         setupUI()
     }
 
+    override fun onResume() {
+        super.onResume()
+        checkResumeSessions()
+    }
+
+    private fun checkResumeSessions() {
+        val inProgress = SessionManager.getInProgressSessions(this)
+        if (inProgress.isNotEmpty()) {
+            binding.btnResume.visibility = View.VISIBLE
+            binding.btnResume.text = "▶ Resume (${inProgress.size} incomplete)"
+        } else {
+            binding.btnResume.visibility = View.GONE
+        }
+    }
+
     private fun setupUI() {
         binding.btnCamera.setOnClickListener {
-            checkPermissionsAndRun(needCamera = true) { openCamera() }
+            checkPermissionsAndRun(needCamera = true) {
+                cameraLauncher.launch(Intent(this, CameraActivity::class.java))
+            }
         }
         binding.btnGallery.setOnClickListener {
             checkPermissionsAndRun(needCamera = false) { imagePickerLauncher.launch("image/*") }
@@ -74,9 +92,37 @@ class MainActivity : AppCompatActivity() {
         binding.btnPdf.setOnClickListener {
             checkPermissionsAndRun(needCamera = false) { pdfPickerLauncher.launch("application/pdf") }
         }
+        binding.btnBatch.setOnClickListener {
+            checkPermissionsAndRun(needCamera = true) {
+                startActivity(Intent(this, BatchScanActivity::class.java))
+            }
+        }
         binding.btnHistory.setOnClickListener {
             startActivity(Intent(this, HistoryActivity::class.java))
         }
+        binding.btnResume.setOnClickListener {
+            showResumeDialog()
+        }
+    }
+
+    private fun showResumeDialog() {
+        val sessions = SessionManager.getInProgressSessions(this)
+        if (sessions.isEmpty()) { binding.btnResume.visibility = View.GONE; return }
+
+        val names = sessions.map { s ->
+            "${s.title} — ${s.completedPages}/${s.totalExpected.takeIf { it > 0 } ?: "?"} পৃষ্ঠা"
+        }.toTypedArray()
+
+        AlertDialog.Builder(this)
+            .setTitle("Resume করুন")
+            .setItems(names) { _, which ->
+                val session = sessions[which]
+                startActivity(Intent(this, BatchScanActivity::class.java).apply {
+                    putExtra(BatchScanActivity.EXTRA_RESUME_SESSION_ID, session.id)
+                })
+            }
+            .setNegativeButton("বাতিল", null)
+            .show()
     }
 
     private fun checkPermissionsAndRun(needCamera: Boolean, action: () -> Unit) {
@@ -94,19 +140,18 @@ class MainActivity : AppCompatActivity() {
         else { pendingAction = action; permissionLauncher.launch(perms.toTypedArray()) }
     }
 
-    private fun openCamera() {
-        cameraLauncher.launch(Intent(this, CameraActivity::class.java))
-    }
-
     private fun processImageUri(uri: Uri) {
-        showLoading(true, "বাংলা স্ক্যান হচ্ছে...")
+        showLoading(true, "স্ক্যান হচ্ছে...")
         scope.launch {
             try {
                 val text = withContext(Dispatchers.IO) {
                     OcrProcessor.processImage(applicationContext, uri)
                 }
                 showLoading(false)
-                openResult(text, uri.toString(), false)
+                startActivity(Intent(this@MainActivity, ResultActivity::class.java).apply {
+                    putExtra(ResultActivity.EXTRA_TEXT, text)
+                    putExtra(ResultActivity.EXTRA_SOURCE_URI, uri.toString())
+                })
             } catch (e: Exception) {
                 showLoading(false)
                 Toast.makeText(this@MainActivity, "OCR failed: ${e.message}", Toast.LENGTH_LONG).show()
@@ -121,15 +166,18 @@ class MainActivity : AppCompatActivity() {
                 val allText = StringBuilder()
                 uris.forEachIndexed { index, uri ->
                     withContext(Dispatchers.Main) {
-                        binding.tvLoadingStatus.text = "স্ক্যান হচ্ছে ${index + 1}/${uris.size}..."
+                        binding.tvLoadingStatus.text = "স্ক্যান হচ্ছে ${index+1}/${uris.size}..."
                     }
                     val text = withContext(Dispatchers.IO) {
                         OcrProcessor.processImage(applicationContext, uri)
                     }
-                    if (text.isNotBlank()) allText.append("--- পৃষ্ঠা ${index + 1} ---\n$text\n\n")
+                    if (text.isNotBlank()) allText.append("--- পৃষ্ঠা ${index+1} ---\n$text\n\n")
                 }
                 showLoading(false)
-                openResult(allText.toString(), uris[0].toString(), true)
+                startActivity(Intent(this@MainActivity, ResultActivity::class.java).apply {
+                    putExtra(ResultActivity.EXTRA_TEXT, allText.toString())
+                    putExtra(ResultActivity.EXTRA_IS_MULTI_PAGE, true)
+                })
             } catch (e: Exception) {
                 showLoading(false)
                 Toast.makeText(this@MainActivity, "OCR failed: ${e.message}", Toast.LENGTH_LONG).show()
@@ -141,9 +189,7 @@ class MainActivity : AppCompatActivity() {
         showLoading(true, "PDF পড়া হচ্ছে...")
         scope.launch {
             try {
-                val pages = withContext(Dispatchers.IO) {
-                    PdfUtil.pdfToImages(applicationContext, uri)
-                }
+                val pages = withContext(Dispatchers.IO) { PdfUtil.pdfToImages(applicationContext, uri) }
                 if (pages.isEmpty()) {
                     showLoading(false)
                     Toast.makeText(this@MainActivity, "PDF পড়া যায়নি", Toast.LENGTH_SHORT).show()
@@ -152,29 +198,24 @@ class MainActivity : AppCompatActivity() {
                 val allText = StringBuilder()
                 pages.forEachIndexed { index, bitmap ->
                     withContext(Dispatchers.Main) {
-                        binding.tvLoadingStatus.text = "পৃষ্ঠা ${index + 1}/${pages.size} স্ক্যান হচ্ছে..."
+                        binding.tvLoadingStatus.text = "পৃষ্ঠা ${index+1}/${pages.size} স্ক্যান হচ্ছে..."
                     }
                     val text = withContext(Dispatchers.IO) {
                         OcrProcessor.processBitmap(applicationContext, bitmap)
                     }
-                    if (text.isNotBlank()) allText.append("=== পৃষ্ঠা ${index + 1} ===\n$text\n\n")
+                    if (text.isNotBlank()) allText.append("=== পৃষ্ঠা ${index+1} ===\n$text\n\n")
                     bitmap.recycle()
                 }
                 showLoading(false)
-                openResult(allText.toString(), uri.toString(), pages.size > 1)
+                startActivity(Intent(this@MainActivity, ResultActivity::class.java).apply {
+                    putExtra(ResultActivity.EXTRA_TEXT, allText.toString())
+                    putExtra(ResultActivity.EXTRA_IS_MULTI_PAGE, pages.size > 1)
+                })
             } catch (e: Exception) {
                 showLoading(false)
-                Toast.makeText(this@MainActivity, "PDF processing failed: ${e.message}", Toast.LENGTH_LONG).show()
+                Toast.makeText(this@MainActivity, "PDF failed: ${e.message}", Toast.LENGTH_LONG).show()
             }
         }
-    }
-
-    private fun openResult(text: String, sourceUri: String, isMultiPage: Boolean) {
-        startActivity(Intent(this, ResultActivity::class.java).apply {
-            putExtra(ResultActivity.EXTRA_TEXT, text)
-            putExtra(ResultActivity.EXTRA_SOURCE_URI, sourceUri)
-            putExtra(ResultActivity.EXTRA_IS_MULTI_PAGE, isMultiPage)
-        })
     }
 
     private fun showLoading(show: Boolean, message: String = "স্ক্যান হচ্ছে...") {
@@ -183,8 +224,5 @@ class MainActivity : AppCompatActivity() {
         binding.mainContent.visibility = if (show) View.GONE else View.VISIBLE
     }
 
-    override fun onDestroy() {
-        super.onDestroy()
-        scope.cancel()
-    }
+    override fun onDestroy() { super.onDestroy(); scope.cancel() }
 }
