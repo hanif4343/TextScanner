@@ -6,7 +6,6 @@
     android:layout_height="match_parent"
     android:background="@color/bg_dark">
 
-    <!-- Main Content -->
     <LinearLayout
         android:id="@+id/mainContent"
         android:layout_width="match_parent"
@@ -14,18 +13,18 @@
         android:orientation="vertical"
         android:gravity="center">
 
-        <!-- Logo / Header -->
+        <!-- Header -->
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="vertical"
             android:gravity="center"
-            android:paddingTop="48dp"
-            android:paddingBottom="32dp">
+            android:paddingTop="40dp"
+            android:paddingBottom="24dp">
 
             <ImageView
-                android:layout_width="96dp"
-                android:layout_height="96dp"
+                android:layout_width="80dp"
+                android:layout_height="80dp"
                 android:src="@mipmap/ic_launcher"
                 android:contentDescription="App Icon" />
 
@@ -33,208 +32,159 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="Text Scanner"
-                android:textSize="28sp"
+                android:textSize="26sp"
                 android:textStyle="bold"
                 android:textColor="@color/white"
-                android:layout_marginTop="12dp" />
+                android:layout_marginTop="10dp" />
 
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="Scan Bengali &amp; English text instantly"
-                android:textSize="14sp"
+                android:text="বাংলা ও ইংরেজি text scan করুন"
+                android:textSize="13sp"
                 android:textColor="@color/text_secondary"
-                android:layout_marginTop="4dp" />
+                android:layout_marginTop="3dp" />
         </LinearLayout>
 
-        <!-- Main Action Cards -->
+        <!-- Resume banner — shows only when incomplete scans exist -->
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnResume"
+            android:layout_width="match_parent"
+            android:layout_height="46dp"
+            android:text="▶ Resume"
+            android:textSize="14sp"
+            android:layout_marginHorizontal="24dp"
+            android:layout_marginBottom="14dp"
+            android:backgroundTint="#1a3a1a"
+            android:textColor="@color/accent_green"
+            app:strokeColor="@color/accent_green"
+            app:strokeWidth="1dp"
+            style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+            android:visibility="gone" />
+
+        <!-- Cards -->
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="vertical"
-            android:paddingHorizontal="24dp"
-            android:gravity="center">
+            android:paddingHorizontal="24dp">
 
-            <!-- Camera Card -->
+            <!-- Camera -->
             <com.google.android.material.card.MaterialCardView
                 android:id="@+id/btnCamera"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 app:cardBackgroundColor="@color/card_camera"
-                app:cardCornerRadius="16dp"
+                app:cardCornerRadius="14dp"
                 app:cardElevation="4dp"
-                android:layout_marginBottom="16dp"
+                android:layout_marginBottom="12dp"
                 android:foreground="?attr/selectableItemBackground">
-
-                <LinearLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:orientation="horizontal"
-                    android:padding="20dp"
-                    android:gravity="center_vertical">
-
-                    <ImageView
-                        android:layout_width="48dp"
-                        android:layout_height="48dp"
-                        android:src="@drawable/ic_camera"
-                        android:tint="@color/white"
-                        android:contentDescription="Camera" />
-
-                    <LinearLayout
-                        android:layout_width="0dp"
-                        android:layout_height="wrap_content"
-                        android:layout_weight="1"
-                        android:orientation="vertical"
-                        android:layout_marginStart="16dp">
-
-                        <TextView
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:text="Camera Scan"
-                            android:textSize="18sp"
-                            android:textStyle="bold"
-                            android:textColor="@color/white" />
-
-                        <TextView
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:text="Take photo and scan"
-                            android:textSize="13sp"
-                            android:textColor="#CCffffff" />
+                <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
+                    android:orientation="horizontal" android:padding="16dp" android:gravity="center_vertical">
+                    <ImageView android:layout_width="40dp" android:layout_height="40dp"
+                        android:src="@drawable/ic_camera" android:tint="@color/white" android:contentDescription="Camera"/>
+                    <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content"
+                        android:layout_weight="1" android:orientation="vertical" android:layout_marginStart="14dp">
+                        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+                            android:text="Camera Scan" android:textSize="16sp" android:textStyle="bold" android:textColor="@color/white"/>
+                        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+                            android:text="ছবি তুলে scan করুন" android:textSize="12sp" android:textColor="#CCffffff"/>
                     </LinearLayout>
-
-                    <ImageView
-                        android:layout_width="24dp"
-                        android:layout_height="24dp"
-                        android:src="@drawable/ic_arrow_right"
-                        android:tint="@color/white"
-                        android:contentDescription="Go" />
+                    <ImageView android:layout_width="20dp" android:layout_height="20dp"
+                        android:src="@drawable/ic_arrow_right" android:tint="@color/white" android:contentDescription="Go"/>
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
 
-            <!-- Gallery Card -->
+            <!-- Batch Scan — new prominent card -->
+            <com.google.android.material.card.MaterialCardView
+                android:id="@+id/btnBatch"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                app:cardBackgroundColor="#1a237e"
+                app:cardCornerRadius="14dp"
+                app:cardElevation="4dp"
+                android:layout_marginBottom="12dp"
+                android:foreground="?attr/selectableItemBackground">
+                <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
+                    android:orientation="horizontal" android:padding="16dp" android:gravity="center_vertical">
+                    <ImageView android:layout_width="40dp" android:layout_height="40dp"
+                        android:src="@drawable/ic_scan" android:tint="@color/white" android:contentDescription="Batch"/>
+                    <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content"
+                        android:layout_weight="1" android:orientation="vertical" android:layout_marginStart="14dp">
+                        <LinearLayout android:layout_width="wrap_content" android:layout_height="wrap_content"
+                            android:orientation="horizontal" android:gravity="center_vertical">
+                            <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+                                android:text="Batch Scan" android:textSize="16sp" android:textStyle="bold" android:textColor="@color/white"/>
+                            <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+                                android:text=" NEW" android:textSize="10sp" android:textColor="#FFD700"
+                                android:layout_marginStart="6dp" android:textStyle="bold"/>
+                        </LinearLayout>
+                        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+                            android:text="অনেক ছবি একসাথে • Retry • Auto-save" android:textSize="12sp" android:textColor="#CCffffff"/>
+                    </LinearLayout>
+                    <ImageView android:layout_width="20dp" android:layout_height="20dp"
+                        android:src="@drawable/ic_arrow_right" android:tint="@color/white" android:contentDescription="Go"/>
+                </LinearLayout>
+            </com.google.android.material.card.MaterialCardView>
+
+            <!-- Gallery -->
             <com.google.android.material.card.MaterialCardView
                 android:id="@+id/btnGallery"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 app:cardBackgroundColor="@color/card_gallery"
-                app:cardCornerRadius="16dp"
+                app:cardCornerRadius="14dp"
                 app:cardElevation="4dp"
-                android:layout_marginBottom="16dp"
+                android:layout_marginBottom="12dp"
                 android:foreground="?attr/selectableItemBackground">
-
-                <LinearLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:orientation="horizontal"
-                    android:padding="20dp"
-                    android:gravity="center_vertical">
-
-                    <ImageView
-                        android:layout_width="48dp"
-                        android:layout_height="48dp"
-                        android:src="@drawable/ic_gallery"
-                        android:tint="@color/white"
-                        android:contentDescription="Gallery" />
-
-                    <LinearLayout
-                        android:layout_width="0dp"
-                        android:layout_height="wrap_content"
-                        android:layout_weight="1"
-                        android:orientation="vertical"
-                        android:layout_marginStart="16dp">
-
-                        <TextView
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:text="Gallery / Images"
-                            android:textSize="18sp"
-                            android:textStyle="bold"
-                            android:textColor="@color/white" />
-
-                        <TextView
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:text="Pick single or multiple images"
-                            android:textSize="13sp"
-                            android:textColor="#CCffffff" />
+                <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
+                    android:orientation="horizontal" android:padding="16dp" android:gravity="center_vertical">
+                    <ImageView android:layout_width="40dp" android:layout_height="40dp"
+                        android:src="@drawable/ic_gallery" android:tint="@color/white" android:contentDescription="Gallery"/>
+                    <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content"
+                        android:layout_weight="1" android:orientation="vertical" android:layout_marginStart="14dp">
+                        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+                            android:text="Gallery" android:textSize="16sp" android:textStyle="bold" android:textColor="@color/white"/>
+                        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+                            android:text="Gallery থেকে ছবি scan" android:textSize="12sp" android:textColor="#CCffffff"/>
                     </LinearLayout>
-
-                    <ImageView
-                        android:layout_width="24dp"
-                        android:layout_height="24dp"
-                        android:src="@drawable/ic_arrow_right"
-                        android:tint="@color/white"
-                        android:contentDescription="Go" />
+                    <ImageView android:layout_width="20dp" android:layout_height="20dp"
+                        android:src="@drawable/ic_arrow_right" android:tint="@color/white" android:contentDescription="Go"/>
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
 
-            <!-- PDF Card -->
+            <!-- PDF -->
             <com.google.android.material.card.MaterialCardView
                 android:id="@+id/btnPdf"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 app:cardBackgroundColor="@color/card_pdf"
-                app:cardCornerRadius="16dp"
+                app:cardCornerRadius="14dp"
                 app:cardElevation="4dp"
-                android:layout_marginBottom="16dp"
+                android:layout_marginBottom="14dp"
                 android:foreground="?attr/selectableItemBackground">
-
-                <LinearLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:orientation="horizontal"
-                    android:padding="20dp"
-                    android:gravity="center_vertical">
-
-                    <ImageView
-                        android:layout_width="48dp"
-                        android:layout_height="48dp"
-                        android:src="@drawable/ic_pdf"
-                        android:tint="@color/white"
-                        android:contentDescription="PDF" />
-
-                    <LinearLayout
-                        android:layout_width="0dp"
-                        android:layout_height="wrap_content"
-                        android:layout_weight="1"
-                        android:orientation="vertical"
-                        android:layout_marginStart="16dp">
-
-                        <TextView
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:text="PDF Scan"
-                            android:textSize="18sp"
-                            android:textStyle="bold"
-                            android:textColor="@color/white" />
-
-                        <TextView
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:text="Extract text from PDF files"
-                            android:textSize="13sp"
-                            android:textColor="#CCffffff" />
+                <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
+                    android:orientation="horizontal" android:padding="16dp" android:gravity="center_vertical">
+                    <ImageView android:layout_width="40dp" android:layout_height="40dp"
+                        android:src="@drawable/ic_pdf" android:tint="@color/white" android:contentDescription="PDF"/>
+                    <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content"
+                        android:layout_weight="1" android:orientation="vertical" android:layout_marginStart="14dp">
+                        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+                            android:text="PDF Scan" android:textSize="16sp" android:textStyle="bold" android:textColor="@color/white"/>
+                        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+                            android:text="PDF থেকে text বের করুন" android:textSize="12sp" android:textColor="#CCffffff"/>
                     </LinearLayout>
-
-                    <ImageView
-                        android:layout_width="24dp"
-                        android:layout_height="24dp"
-                        android:src="@drawable/ic_arrow_right"
-                        android:tint="@color/white"
-                        android:contentDescription="Go" />
+                    <ImageView android:layout_width="20dp" android:layout_height="20dp"
+                        android:src="@drawable/ic_arrow_right" android:tint="@color/white" android:contentDescription="Go"/>
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
 
-            <!-- History -->
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/btnHistory"
                 android:layout_width="match_parent"
-                android:layout_height="52dp"
-                android:text="View Scan History"
-                android:textSize="15sp"
-                app:icon="@drawable/ic_history"
-                app:iconGravity="start"
+                android:layout_height="48dp"
+                android:text="📋  Scan History"
+                android:textSize="14sp"
                 style="@style/Widget.MaterialComponents.Button.OutlinedButton"
                 app:strokeColor="@color/accent_blue"
                 android:textColor="@color/accent_blue" />
@@ -252,18 +202,18 @@
         android:visibility="gone">
 
         <ProgressBar
-            android:layout_width="64dp"
-            android:layout_height="64dp"
+            android:layout_width="56dp"
+            android:layout_height="56dp"
             android:indeterminateTint="@color/accent_blue" />
 
         <TextView
             android:id="@+id/tvLoadingStatus"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="Scanning..."
+            android:text="স্ক্যান হচ্ছে..."
             android:textSize="16sp"
             android:textColor="@color/white"
-            android:layout_marginTop="16dp" />
+            android:layout_marginTop="14dp" />
     </LinearLayout>
 
 </androidx.coordinatorlayout.widget.CoordinatorLayout>
