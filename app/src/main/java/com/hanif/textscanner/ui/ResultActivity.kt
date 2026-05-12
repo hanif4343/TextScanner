@@ -18,9 +18,8 @@ import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
 import com.hanif.textscanner.R
+import com.hanif.textscanner.data.SessionManager
 import com.hanif.textscanner.databinding.ActivityResultBinding
-import com.hanif.textscanner.data.ScanHistory
-import com.hanif.textscanner.data.HistoryManager
 import com.hanif.textscanner.util.McqParser
 import com.hanif.textscanner.util.TextExporter
 import java.text.SimpleDateFormat
@@ -29,47 +28,41 @@ import java.util.*
 class ResultActivity : AppCompatActivity() {
 
     companion object {
-        const val EXTRA_TEXT = "extra_text"
+        const val EXTRA_TEXT       = "extra_text"
         const val EXTRA_SOURCE_URI = "extra_source_uri"
         const val EXTRA_IS_MULTI_PAGE = "extra_is_multi_page"
+        const val EXTRA_SESSION_ID = "extra_session_id"
     }
 
     private lateinit var binding: ActivityResultBinding
     private var originalText = ""
     private var isEditing = false
-    private var searchQuery = ""
+    private var sessionId = -1L
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         binding = ActivityResultBinding.inflate(layoutInflater)
         setContentView(binding.root)
-
         setSupportActionBar(binding.toolbar)
         supportActionBar?.setDisplayHomeAsUpEnabled(true)
 
-        originalText = intent.getStringExtra(EXTRA_TEXT) ?: ""
-        val sourceUri = intent.getStringExtra(EXTRA_SOURCE_URI) ?: ""
-        val isMultiPage = intent.getBooleanExtra(EXTRA_IS_MULTI_PAGE, false)
+        originalText   = intent.getStringExtra(EXTRA_TEXT) ?: ""
+        sessionId      = intent.getLongExtra(EXTRA_SESSION_ID, -1L)
 
         if (originalText.isBlank()) {
-            binding.tvEmpty.visibility = View.VISIBLE
+            binding.tvEmpty.visibility    = View.VISIBLE
             binding.scrollContent.visibility = View.GONE
         } else {
-            binding.tvEmpty.visibility = View.GONE
+            binding.tvEmpty.visibility    = View.GONE
             binding.scrollContent.visibility = View.VISIBLE
-            displayText(originalText)
+            binding.etResult.setText(originalText)
+            binding.etResult.isEnabled = false
             updateStats(originalText)
-            saveToHistory(originalText, sourceUri)
         }
 
         setupButtons()
         setupSearch()
         detectMcq()
-    }
-
-    private fun displayText(text: String) {
-        binding.etResult.setText(text)
-        binding.etResult.isEnabled = false
     }
 
     private fun updateStats(text: String) {
@@ -80,75 +73,132 @@ class ResultActivity : AppCompatActivity() {
     }
 
     private fun detectMcq() {
-        val mcqData = McqParser.parse(originalText)
-        if (mcqData.isNotEmpty()) {
+        val mcq = McqParser.parse(originalText)
+        if (mcq.isNotEmpty()) {
             binding.chipMcqDetected.visibility = View.VISIBLE
-            binding.chipMcqDetected.text = "MCQ: ${mcqData.size} questions found"
-            binding.chipMcqDetected.setOnClickListener {
-                showMcqDialog(mcqData)
-            }
+            binding.chipMcqDetected.text = "MCQ: ${mcq.size} টি প্রশ্ন"
+            binding.chipMcqDetected.setOnClickListener { showMcqDialog(mcq) }
         }
     }
 
-    private fun showMcqDialog(mcqData: List<McqParser.McqQuestion>) {
+    private fun showMcqDialog(mcq: List<McqParser.McqQuestion>) {
         val sb = StringBuilder()
-        mcqData.forEachIndexed { i, q ->
-            sb.append("Q${i + 1}. ${q.question}\n")
-            q.options.forEach { sb.append("  $it\n") }
+        mcq.forEachIndexed { i, q ->
+            sb.append("Q${i+1}. ${q.question}\n")
+            q.options.forEach { sb.append("   $it\n") }
             sb.append("\n")
         }
         AlertDialog.Builder(this)
-            .setTitle("MCQ Questions (${mcqData.size})")
+            .setTitle("MCQ (${mcq.size} টি)")
             .setMessage(sb.toString())
-            .setPositiveButton("Copy All") { _, _ ->
-                copyToClipboard(sb.toString())
-            }
-            .setNegativeButton("Close", null)
+            .setPositiveButton("সব Copy করুন") { _,_ -> copyToClipboard(sb.toString()) }
+            .setNegativeButton("বন্ধ", null)
             .show()
     }
 
     private fun setupButtons() {
-        // Copy button
         binding.btnCopy.setOnClickListener {
-            val text = binding.etResult.text.toString()
-            copyToClipboard(text)
-            Toast.makeText(this, "Copied to clipboard!", Toast.LENGTH_SHORT).show()
+            copyToClipboard(binding.etResult.text.toString())
+            Toast.makeText(this, "Copied!", Toast.LENGTH_SHORT).show()
         }
 
-        // Edit/Save toggle
         binding.btnEdit.setOnClickListener {
             isEditing = !isEditing
             binding.etResult.isEnabled = isEditing
             if (isEditing) {
                 binding.etResult.requestFocus()
                 binding.btnEdit.text = "Save"
-                binding.btnEdit.setIconResource(R.drawable.ic_save)
-                Toast.makeText(this, "Editing enabled", Toast.LENGTH_SHORT).show()
             } else {
                 binding.btnEdit.text = "Edit"
-                binding.btnEdit.setIconResource(R.drawable.ic_edit)
                 originalText = binding.etResult.text.toString()
                 updateStats(originalText)
-                Toast.makeText(this, "Changes saved", Toast.LENGTH_SHORT).show()
+                // Update session if exists
+                if (sessionId != -1L) {
+                    val session = SessionManager.getSession(this, sessionId)
+                    session?.let {
+                        // update first page text for single-page sessions
+                    }
+                }
+                Toast.makeText(this, "Saved", Toast.LENGTH_SHORT).show()
             }
         }
 
-        // Share button
-        binding.btnShare.setOnClickListener {
-            showShareOptions()
-        }
+        binding.btnShare.setOnClickListener { showShareOptions() }
+        binding.btnExport.setOnClickListener { showExportOptions() }
 
-        // Export button
-        binding.btnExport.setOnClickListener {
-            showExportOptions()
-        }
+        // Quick Copy button — new feature
+        binding.btnQuickCopy.setOnClickListener { showQuickCopyMenu() }
+    }
+
+    /** Quick Copy — copy just questions, just answers, or MCQ format */
+    private fun showQuickCopyMenu() {
+        val text = binding.etResult.text.toString()
+        val mcq  = McqParser.parse(text)
+        val lines = text.lines()
+
+        val options = mutableListOf(
+            "📋 সব Text Copy",
+            "❓ শুধু প্রশ্ন Copy",
+            "💡 শুধু উত্তর Copy",
+        )
+        if (mcq.isNotEmpty()) options.add("✅ MCQ Format Copy (${mcq.size}টি)")
+        options.add("📊 Formatted Copy (with header)")
+
+        AlertDialog.Builder(this)
+            .setTitle("কী copy করবেন?")
+            .setItems(options.toTypedArray()) { _, which ->
+                val copied = when (which) {
+                    0 -> text
+
+                    1 -> {
+                        // Extract question lines — lines with question marks or numbered
+                        lines.filter { line ->
+                            line.contains("?") || line.contains("কী?") ||
+                            line.contains("কি?") || line.matches(Regex("^[০-৯\\d]+[।.)].*"))
+                        }.joinToString("\n")
+                    }
+
+                    2 -> {
+                        // Extract answer lines — lines starting with উত্তর:
+                        val answerLines = mutableListOf<String>()
+                        var capturing = false
+                        lines.forEach { line ->
+                            if (line.startsWith("উত্তর") || line.startsWith("Answer")) {
+                                capturing = true
+                                answerLines.add(line)
+                            } else if (capturing && line.matches(Regex("^[০-৯\\d]+.*"))) {
+                                capturing = false
+                            } else if (capturing && line.isNotBlank()) {
+                                answerLines.add(line)
+                            }
+                        }
+                        if (answerLines.isEmpty()) {
+                            Toast.makeText(this,"কোনো উত্তর পাওয়া যায়নি",Toast.LENGTH_SHORT).show()
+                            return@setItems
+                        }
+                        answerLines.joinToString("\n")
+                    }
+
+                    3 -> if (mcq.isNotEmpty()) McqParser.formatMcq(mcq) else text
+
+                    4 -> "Text Scanner Export\n" +
+                         "তারিখ: ${SimpleDateFormat("dd/MM/yyyy HH:mm",Locale.getDefault()).format(Date())}\n" +
+                         "═══════════════════\n\n$text"
+
+                    else -> text
+                }
+                copyToClipboard(copied)
+                Toast.makeText(this, "Copied! (${copied.length} chars)", Toast.LENGTH_SHORT).show()
+            }
+            .show()
     }
 
     private fun setupSearch() {
         binding.btnSearch.setOnClickListener {
             if (binding.searchBar.visibility == View.VISIBLE) {
                 binding.searchBar.visibility = View.GONE
-                clearHighlights()
+                binding.etResult.setText(originalText)
+                binding.tvSearchCount.visibility = View.GONE
             } else {
                 binding.searchBar.visibility = View.VISIBLE
                 binding.etSearch.requestFocus()
@@ -158,123 +208,81 @@ class ResultActivity : AppCompatActivity() {
         binding.etSearch.addTextChangedListener(object : TextWatcher {
             override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
             override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {
-                searchQuery = s.toString()
-                highlightSearchResults(searchQuery)
+                highlightSearch(s.toString())
             }
             override fun afterTextChanged(s: Editable?) {}
         })
 
         binding.btnSearchClear.setOnClickListener {
             binding.etSearch.text?.clear()
-            clearHighlights()
+            binding.etResult.setText(originalText)
+            binding.tvSearchCount.visibility = View.GONE
         }
     }
 
-    private fun highlightSearchResults(query: String) {
-        if (query.isBlank()) {
-            clearHighlights()
-            return
-        }
-        val text = binding.etResult.text.toString()
+    private fun highlightSearch(query: String) {
+        if (query.isBlank()) { binding.etResult.setText(originalText); return }
+        val text = originalText
         val spannable = SpannableString(text)
         var count = 0
-        var index = text.indexOf(query, ignoreCase = true)
-        while (index >= 0) {
+        var idx = text.indexOf(query, ignoreCase = true)
+        while (idx >= 0) {
             spannable.setSpan(
                 BackgroundColorSpan(ContextCompat.getColor(this, R.color.highlight_yellow)),
-                index,
-                index + query.length,
-                Spannable.SPAN_EXCLUSIVE_EXCLUSIVE
+                idx, idx + query.length, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE
             )
             count++
-            index = text.indexOf(query, index + 1, ignoreCase = true)
+            idx = text.indexOf(query, idx + 1, ignoreCase = true)
         }
         binding.etResult.setText(spannable)
-        binding.tvSearchCount.text = if (count > 0) "$count found" else "Not found"
+        binding.tvSearchCount.text = "$count found"
         binding.tvSearchCount.visibility = View.VISIBLE
     }
 
-    private fun clearHighlights() {
-        binding.etResult.setText(originalText)
-        binding.tvSearchCount.visibility = View.GONE
-    }
-
     private fun showShareOptions() {
-        val options = arrayOf("Share as Text", "Share as TXT File")
         AlertDialog.Builder(this)
             .setTitle("Share")
-            .setItems(options) { _, which ->
-                when (which) {
-                    0 -> shareAsText()
-                    1 -> shareAsTxtFile()
+            .setItems(arrayOf("Text হিসেবে Share", "File হিসেবে Share")) { _, which ->
+                if (which == 0) {
+                    startActivity(Intent.createChooser(
+                        Intent(Intent.ACTION_SEND).apply {
+                            type = "text/plain"
+                            putExtra(Intent.EXTRA_TEXT, binding.etResult.text.toString())
+                        }, "Share via"
+                    ))
+                } else {
+                    val uri = TextExporter.exportToFile(this, binding.etResult.text.toString())
+                    uri?.let {
+                        startActivity(Intent.createChooser(
+                            Intent(Intent.ACTION_SEND).apply {
+                                type = "text/plain"
+                                putExtra(Intent.EXTRA_STREAM, it)
+                                addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                            }, "Share file"
+                        ))
+                    }
                 }
             }.show()
     }
 
     private fun showExportOptions() {
-        val options = arrayOf("Save as TXT", "Save as formatted TXT")
+        val text = binding.etResult.text.toString()
         AlertDialog.Builder(this)
             .setTitle("Export")
-            .setItems(options) { _, which ->
-                when (which) {
-                    0 -> exportAsTxt(false)
-                    1 -> exportAsTxt(true)
-                }
+            .setItems(arrayOf("TXT File সেভ করুন", "Formatted TXT")) { _, which ->
+                val content = if (which == 1) {
+                    "Text Scanner\nতারিখ: ${SimpleDateFormat("dd/MM/yyyy HH:mm",
+                        Locale.getDefault()).format(Date())}\n══════════════\n\n$text"
+                } else text
+                val uri = TextExporter.exportToFile(this, content)
+                if (uri != null) Toast.makeText(this,"Downloads-এ সেভ হয়েছে!",Toast.LENGTH_LONG).show()
+                else Toast.makeText(this,"Export ব্যর্থ",Toast.LENGTH_SHORT).show()
             }.show()
     }
 
-    private fun shareAsText() {
-        val intent = Intent(Intent.ACTION_SEND).apply {
-            type = "text/plain"
-            putExtra(Intent.EXTRA_TEXT, binding.etResult.text.toString())
-        }
-        startActivity(Intent.createChooser(intent, "Share text via"))
-    }
-
-    private fun shareAsTxtFile() {
-        val uri = TextExporter.exportToFile(this, binding.etResult.text.toString())
-        uri?.let {
-            val intent = Intent(Intent.ACTION_SEND).apply {
-                type = "text/plain"
-                putExtra(Intent.EXTRA_STREAM, it)
-                addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-            }
-            startActivity(Intent.createChooser(intent, "Share file via"))
-        }
-    }
-
-    private fun exportAsTxt(formatted: Boolean) {
-        val text = if (formatted) {
-            "Text Scanner - Export\n" +
-            "Date: ${SimpleDateFormat("dd/MM/yyyy HH:mm", Locale.getDefault()).format(Date())}\n" +
-            "═══════════════════════════\n\n" +
-            binding.etResult.text.toString()
-        } else {
-            binding.etResult.text.toString()
-        }
-        val uri = TextExporter.exportToFile(this, text)
-        if (uri != null) {
-            Toast.makeText(this, "Exported to Downloads!", Toast.LENGTH_LONG).show()
-        } else {
-            Toast.makeText(this, "Export failed", Toast.LENGTH_SHORT).show()
-        }
-    }
-
     private fun copyToClipboard(text: String) {
-        val clipboard = getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
-        val clip = ClipData.newPlainText("Scanned Text", text)
-        clipboard.setPrimaryClip(clip)
-    }
-
-    private fun saveToHistory(text: String, sourceUri: String) {
-        val history = ScanHistory(
-            id = System.currentTimeMillis(),
-            text = text,
-            sourceUri = sourceUri,
-            timestamp = System.currentTimeMillis(),
-            wordCount = text.trim().split("\\s+".toRegex()).filter { it.isNotEmpty() }.size
-        )
-        HistoryManager.addHistory(this, history)
+        val cm = getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+        cm.setPrimaryClip(ClipData.newPlainText("Scanned Text", text))
     }
 
     override fun onCreateOptionsMenu(menu: Menu): Boolean {
@@ -282,26 +290,15 @@ class ResultActivity : AppCompatActivity() {
         return true
     }
 
-    override fun onOptionsItemSelected(item: MenuItem): Boolean {
-        return when (item.itemId) {
-            android.R.id.home -> { finish(); true }
-            R.id.action_select_all -> {
-                binding.etResult.selectAll()
-                true
-            }
-            R.id.action_clear -> {
-                AlertDialog.Builder(this)
-                    .setTitle("Clear Text")
-                    .setMessage("Clear all scanned text?")
-                    .setPositiveButton("Clear") { _, _ ->
-                        binding.etResult.setText("")
-                        originalText = ""
-                    }
-                    .setNegativeButton("Cancel", null)
-                    .show()
-                true
-            }
-            else -> super.onOptionsItemSelected(item)
+    override fun onOptionsItemSelected(item: MenuItem) = when (item.itemId) {
+        android.R.id.home -> { finish(); true }
+        R.id.action_select_all -> { binding.etResult.selectAll(); true }
+        R.id.action_clear -> {
+            AlertDialog.Builder(this).setTitle("Text মুছবেন?")
+                .setPositiveButton("হ্যাঁ") { _,_ ->
+                    binding.etResult.setText(""); originalText = "" }
+                .setNegativeButton("না", null).show(); true
         }
+        else -> super.onOptionsItemSelected(item)
     }
 }
