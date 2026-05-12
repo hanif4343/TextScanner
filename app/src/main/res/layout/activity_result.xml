@@ -226,6 +226,22 @@
             app:strokeColor="@color/accent_blue"
             android:textColor="@color/accent_blue" />
 
+        <!-- Quick Copy -->
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnQuickCopy"
+            android:layout_width="0dp"
+            android:layout_height="44dp"
+            android:layout_weight="1"
+            android:text="Quick"
+            android:textSize="12sp"
+            app:icon="@drawable/ic_copy"
+            app:iconSize="18dp"
+            app:iconGravity="top"
+            android:layout_marginHorizontal="3dp"
+            style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+            app:strokeColor="@color/accent_blue"
+            android:textColor="@color/accent_blue" />
+
         <!-- Export -->
         <com.google.android.material.button.MaterialButton
             android:id="@+id/btnExport"
