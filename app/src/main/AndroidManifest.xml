@@ -59,6 +59,12 @@
             android:exported="false"
             android:screenOrientation="portrait" />
 
+        <activity
+            android:name=".ui.BatchScanActivity"
+            android:exported="false"
+            android:screenOrientation="portrait"
+            android:windowSoftInputMode="adjustResize" />
+
         <!-- File provider for sharing -->
         <provider
             android:name="androidx.core.content.FileProvider"
