@@ -9,6 +9,7 @@ import android.graphics.ColorMatrixColorFilter
 import android.graphics.Paint
 import android.net.Uri
 import android.util.Log
+import com.hanif.textscanner.util.BengaliTextFixer
 import com.google.mlkit.vision.common.InputImage
 import com.google.mlkit.vision.text.TextRecognition
 import com.google.mlkit.vision.text.devanagari.DevanagariTextRecognizerOptions
@@ -48,10 +49,11 @@ object OcrProcessor {
             val latEnh = runOcr(enh, useDevanagari = false)
             enh.recycle()
             val bestEnh = if (devEnh.length >= latEnh.length) devEnh else latEnh
-            return if (bestEnh.length > best.length) bestEnh else best
+            val finalEnh = if (bestEnh.length > best.length) bestEnh else best
+            return BengaliTextFixer.fix(finalEnh)
         }
 
-        return best
+        return BengaliTextFixer.fix(best)
     }
 
     private suspend fun runOcr(bmp: Bitmap, useDevanagari: Boolean): String =
